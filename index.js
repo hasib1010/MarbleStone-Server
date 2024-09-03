@@ -10,7 +10,9 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 5001;
 
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173' // Allow only this origin
+}));
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.4xo1h.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -27,7 +29,7 @@ const client = new MongoClient(uri, {
 // Initialize MongoDB connection
 async function initializeDatabase() {
   try {
-    await client.connect(); 
+    await client.connect();
 
     const database = client.db("marbleStoneDB");
     const blogCollection = database.collection("BlogCollection");
@@ -83,42 +85,42 @@ async function initializeDatabase() {
 
     app.put("/blogs/:id", async (req, res) => {
       const id = req.params.id;
-  
+
       // Validate ID format
       if (!ObjectId.isValid(id)) {
-          return res.status(400).send({ error: "Invalid ID format" });
+        return res.status(400).send({ error: "Invalid ID format" });
       }
-  
+
       const blog = req.body;
       const filter = { _id: new ObjectId(id) };
-      
+
       // Construct the update object
       const updateBlog = {
-          $set: {
-              title: blog.title,
-              author: blog.author,
-              author_avatar: blog.author_avatar,
-              published_date: blog.published_date,
-              blog_banner_image: blog.blog_banner_image,
-              blog_image: blog.blog_image,
-              category: blog.category,
-              subtitles: blog.subtitles || [], // Set new subtitles or default to empty array
-              content: blog.content || []      // Set new content or default to empty array
-          }
+        $set: {
+          title: blog.title,
+          author: blog.author,
+          author_avatar: blog.author_avatar,
+          published_date: blog.published_date,
+          blog_banner_image: blog.blog_banner_image,
+          blog_image: blog.blog_image,
+          category: blog.category,
+          subtitles: blog.subtitles || [], // Set new subtitles or default to empty array
+          content: blog.content || []      // Set new content or default to empty array
+        }
       };
-  
+
       try {
-          // Perform the update
-          const result = await blogCollection.updateOne(filter, updateBlog);
-          if (result.modifiedCount === 0) {
-              return res.status(404).send({ error: "Blog not found or no changes made" });
-          }
-          res.send(result);
+        // Perform the update
+        const result = await blogCollection.updateOne(filter, updateBlog);
+        if (result.modifiedCount === 0) {
+          return res.status(404).send({ error: "Blog not found or no changes made" });
+        }
+        res.send(result);
       } catch (error) {
-          res.status(500).send({ error: "An error occurred while updating the blog" });
+        res.status(500).send({ error: "An error occurred while updating the blog" });
       }
-  });
-  
+    });
+
 
 
     // Start the server
