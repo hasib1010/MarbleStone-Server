@@ -1,14 +1,11 @@
-const express = require('express');
-const cors = require('cors');
+const express = require('express'); 
 require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 const app = express();
 const port = process.env.PORT || 5001;
-
-app.use(cors({
-  origin: 'http://localhost:5173' // Allow only this origin
-}));
+const cors = require("cors");
+app.use(cors());
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.4xo1h.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
