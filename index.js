@@ -1,10 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config()
-console.log(process.env.DB_USER);
-console.log(process.env.DB_PASSWORD);
-
-
+require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 const app = express();
@@ -26,111 +22,108 @@ const client = new MongoClient(uri, {
   }
 });
 
-// Initialize MongoDB connection
 async function initializeDatabase() {
   try {
     await client.connect();
-
     const database = client.db("marbleStoneDB");
     const blogCollection = database.collection("BlogCollection");
 
     // Define routes
-    app.get('/', (req, res) => {
-      res.send('Hello World!');
-    });
+    app.get('/', (req, res) => res.send('Hello World!'));
 
     app.post('/blogs', async (req, res) => {
       try {
         const newBlog = req.body;
-        console.log(newBlog);
         const result = await blogCollection.insertOne(newBlog);
-        res.status(201).send(result);
+        res.status(201).json(result);
       } catch (error) {
         console.error('Error inserting document:', error);
-        res.status(500).send('Internal Server Error');
+        res.status(500).json({ error: 'Internal Server Error' });
       }
     });
-    // GET route to retrieve all blogs
+
     app.get('/blogs', async (req, res) => {
       try {
         const cursor = blogCollection.find();
         const blogs = await cursor.toArray();
-        res.status(200).json({ blogs }); // Send the data as { blogs: [...] }
+        res.status(200).json({ blogs });
       } catch (error) {
         console.error('Error retrieving documents:', error);
-        res.status(500).send('Internal Server Error');
+        res.status(500).json({ error: 'Internal Server Error' });
       }
     });
 
-    app.get("/blogs/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await blogCollection.findOne(query);
-      res.send(result)
-    })
-    app.delete("/blogs/:id", async (req, res) => {
-      const id = req.params.id;
-      if (!ObjectId.isValid(id)) {
-        return res.status(400).send({ error: "Invalid ID format" });
-      }
-
-      const query = { _id: new ObjectId(id) };
+    app.get('/blogs/:id', async (req, res) => {
       try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await blogCollection.findOne(query);
+        if (result) {
+          res.status(200).json(result);
+        } else {
+          res.status(404).json({ error: 'Blog not found' });
+        }
+      } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+    app.delete('/blogs/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).json({ error: 'Invalid ID format' });
+        }
+        const query = { _id: new ObjectId(id) };
         const result = await blogCollection.deleteOne(query);
-        res.send(result);
+        if (result.deletedCount > 0) {
+          res.status(200).json(result);
+        } else {
+          res.status(404).json({ error: 'Blog not found' });
+        }
       } catch (error) {
-        res.status(500).send({ error: "An error occurred" });
+        res.status(500).json({ error: 'Internal Server Error' });
       }
     });
 
-    app.put("/blogs/:id", async (req, res) => {
-      const id = req.params.id;
-
-      // Validate ID format
-      if (!ObjectId.isValid(id)) {
-        return res.status(400).send({ error: "Invalid ID format" });
-      }
-
-      const blog = req.body;
-      const filter = { _id: new ObjectId(id) };
-
-      // Construct the update object
-      const updateBlog = {
-        $set: {
-          title: blog.title,
-          author: blog.author,
-          author_avatar: blog.author_avatar,
-          published_date: blog.published_date,
-          blog_banner_image: blog.blog_banner_image,
-          blog_image: blog.blog_image,
-          category: blog.category,
-          subtitles: blog.subtitles || [], // Set new subtitles or default to empty array
-          content: blog.content || []      // Set new content or default to empty array
-        }
-      };
-
+    app.put('/blogs/:id', async (req, res) => {
       try {
-        // Perform the update
-        const result = await blogCollection.updateOne(filter, updateBlog);
-        if (result.modifiedCount === 0) {
-          return res.status(404).send({ error: "Blog not found or no changes made" });
+        const id = req.params.id;
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).json({ error: 'Invalid ID format' });
         }
-        res.send(result);
+
+        const blog = req.body;
+        const filter = { _id: new ObjectId(id) };
+        const updateBlog = {
+          $set: {
+            title: blog.title,
+            author: blog.author,
+            author_avatar: blog.author_avatar,
+            published_date: blog.published_date,
+            blog_banner_image: blog.blog_banner_image,
+            blog_image: blog.blog_image,
+            category: blog.category,
+            subtitles: blog.subtitles || [],
+            content: blog.content || []
+          }
+        };
+
+        const result = await blogCollection.updateOne(filter, updateBlog);
+        if (result.modifiedCount > 0) {
+          res.status(200).json(result);
+        } else {
+          res.status(404).json({ error: 'Blog not found or no changes made' });
+        }
       } catch (error) {
-        res.status(500).send({ error: "An error occurred while updating the blog" });
+        res.status(500).json({ error: 'Internal Server Error' });
       }
     });
 
-
-
-    // Start the server
-    app.listen(port, () => {
-      console.log(`Example app listening on port ${port}`);
-    });
+    app.listen(port, () => console.log(`Server running on port ${port}`));
   } catch (error) {
     console.error('Error initializing database:', error);
   }
 }
 
-// Call the function to initialize the database and server
 initializeDatabase();
