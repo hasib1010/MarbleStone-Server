@@ -67,35 +67,63 @@ module.exports = function (database) {
 
     router.put('/:id', async (req, res) => {
         const id = req.params.id;
-        const { photoURL } = req.body; // Extract photoURL from request body
-    
-        if (!photoURL) {
-            return res.status(400).json({ message: 'photoURL is required' });
-        }
-    
+        const updates = req.body;
+
+        console.log('Received updates:', updates); // Log incoming data
+
         const filter = { _id: new ObjectId(id) };
+        const updateFields = {};
+
+        // Include only fields that are present in the request
+        if (updates.profilePictureURL !== undefined) updateFields.profilePictureURL = updates.profilePictureURL;
+        if (updates.name !== undefined) updateFields.name = updates.name;
+
+        if (Object.keys(updateFields).length === 0) {
+            return res.status(400).json({ message: 'No fields to update' });
+        }
+
         const updatedUser = {
-            $set: {
-                profilePictureURL: profilePictureURL,
-            },
+            $set: updateFields,
         };
-    
+
         try {
             const result = await userCollection.updateOne(filter, updatedUser);
-    
+            console.log('Update result:', result); // Log the result of the update operation
+
             if (result.matchedCount === 0) {
                 return res.status(404).json({ message: 'User not found' });
             }
-    
-            res.status(200).json({ message: 'Profile picture updated successfully' });
+
+            res.status(200).json({ message: 'User profile updated successfully' });
         } catch (error) {
             console.error('Error updating user:', error);
             res.status(500).json({ message: 'Internal Server Error' });
         }
     });
-    
-    
-    
+
+    router.delete('/:id', async (req, res) => {
+        try {
+            const id = req.params.id;
+            if (!ObjectId.isValid(id)) {
+                return res.status(400).json({ error: 'Invalid ID format' });
+            }
+            const query = { _id: new ObjectId(id) };
+            const result = await userCollection.deleteOne(query);
+            if (result.deletedCount > 0) {
+                res.status(200).json(result);
+            } else {
+                res.status(404).json({ error: 'Blog not found' });
+            }
+        } catch (error) {
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    });
+
+
+
+
+
+
 
     return router;
 };
